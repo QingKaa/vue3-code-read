@@ -1,5 +1,12 @@
 var Vue = (function (exports) {
   'use strict';
+
+  /**
+   * 返回一个function 判断参数是否在str之中
+   * @param {*} str 
+   * @param {*} expectsLowerCase 
+   * @returns 
+   */
   function makeMap(str, expectsLowerCase) {
     const map = /* @__PURE__ */ Object.create(null);
     const list = str.split(",");
@@ -79,22 +86,36 @@ var Vue = (function (exports) {
   const camelize = cacheStringFunction((str) => {
     return str.replace(camelizeRE, (_, c) => c ? c.toUpperCase() : "");
   });
+  // 字符串连接正则
   const hyphenateRE = /\B([A-Z])/g;
+  /**
+   * 将字符串连接的字符 转换成 横杆连接
+   * abcAbc => abc-abc
+   */
   const hyphenate = cacheStringFunction(
     (str) => str.replace(hyphenateRE, "-$1").toLowerCase()
   );
+  /**
+   * 首字母大写
+   */
   const capitalize = cacheStringFunction(
     (str) => str.charAt(0).toUpperCase() + str.slice(1)
   );
+  /**
+   * 
+   */
   const toHandlerKey = cacheStringFunction(
     (str) => str ? `on${capitalize(str)}` : ``
   );
+  // Object.is 判断两个值是否严格相等，判断引用类型时候只能判断是否引用同一个对象，并不能判断对象的值是否相等
   const hasChanged = (value, oldValue) => !Object.is(value, oldValue);
+  // 批处理函数列表
   const invokeArrayFns = (fns, arg) => {
     for (let i = 0; i < fns.length; i++) {
       fns[i](arg);
     }
   };
+  // 在 obj 上添加 key 属性，值为 value，并设置改值为不可枚举
   const def = (obj, key, value) => {
     Object.defineProperty(obj, key, {
       configurable: true,
@@ -111,6 +132,7 @@ var Vue = (function (exports) {
     return isNaN(n) ? val : n;
   };
   let _globalThis;
+  //   获取当前全局对象
   const getGlobalThis = () => {
     return _globalThis || (_globalThis = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
   };
@@ -181,6 +203,7 @@ var Vue = (function (exports) {
     return res.join("\n");
   }
 
+//   格式化样式 处理成对象的形式
   function normalizeStyle(value) {
     if (isArray(value)) {
       const res = {};
@@ -200,8 +223,11 @@ var Vue = (function (exports) {
       return value;
     }
   }
+//   列表分隔正则
   const listDelimiterRE = /;(?![^(]*\))/g;
+//   属性值绑定正则
   const propertyDelimiterRE = /:([^]+)/;
+//   样式注释正则  匹配带有 /*  */ 注释
   const styleCommentRE = /\/\*[^]*?\*\//g;
   function parseStringStyle(cssText) {
     const ret = {};
@@ -213,6 +239,7 @@ var Vue = (function (exports) {
     });
     return ret;
   }
+  // 格式化 class 类名，返回字符形式
   function normalizeClass(value) {
     let res = "";
     if (isString(value)) {
@@ -233,6 +260,8 @@ var Vue = (function (exports) {
     }
     return res.trim();
   }
+
+  // 格式化 props属性
   function normalizeProps(props) {
     if (!props)
       return null;
