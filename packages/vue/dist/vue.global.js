@@ -400,7 +400,7 @@ var Vue = (function (exports) {
     console.warn(`[Vue warn] ${msg}`, ...args);
   }
 
-	// ---------------------------- Effect ---------------------------------
+	// ---------------------------- EffectScope ---------------------------------
   let activeEffectScope;
   class EffectScope {
 		// detached：独立的
@@ -901,6 +901,7 @@ var Vue = (function (exports) {
     track(target, "iterate", isArray(target) ? "length" : ITERATE_KEY);
     return Reflect.ownKeys(target);
   }
+//   普通响应式 proxy 配置项
   const mutableHandlers = {
     get: get$1,
     set: set$1,
@@ -908,6 +909,7 @@ var Vue = (function (exports) {
     has: has$1,
     ownKeys
   };
+//   只读响应式 proxy 配置项
   const readonlyHandlers = {
     get: readonlyGet,
     set(target, key) {
@@ -929,6 +931,7 @@ var Vue = (function (exports) {
       return true;
     }
   };
+//   浅层响应式 proxy 配置项
   const shallowReactiveHandlers = /* @__PURE__ */ extend(
     {},
     mutableHandlers,
@@ -937,6 +940,7 @@ var Vue = (function (exports) {
       set: shallowSet
     }
   );
+//   浅层只读响应式 proxy 配置项
   const shallowReadonlyHandlers = /* @__PURE__ */ extend(
     {},
     readonlyHandlers,

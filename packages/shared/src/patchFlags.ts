@@ -25,7 +25,7 @@ export const enum PatchFlags {
   /**
    * Indicates an element with dynamic class binding.
    */
-  CLASS = 1 << 1,
+  CLASS = 1 << 1,  // 2
 
   /**
    * Indicates an element with dynamic style
@@ -38,7 +38,7 @@ export const enum PatchFlags {
    * render() { return e('div', { style }) }
    * ```
    */
-  STYLE = 1 << 2,
+  STYLE = 1 << 2, // 4
 
   /**
    * Indicates an element that has non-class/style dynamic props.
@@ -47,20 +47,20 @@ export const enum PatchFlags {
    * array that contains the keys of the props that may change so the runtime
    * can diff them faster (without having to worry about removed props)
    */
-  PROPS = 1 << 3,
+  PROPS = 1 << 3, // 8
 
   /**
    * Indicates an element with props with dynamic keys. When keys change, a full
    * diff is always needed to remove the old key. This flag is mutually
    * exclusive with CLASS, STYLE and PROPS.
    */
-  FULL_PROPS = 1 << 4,
+  FULL_PROPS = 1 << 4, // 16
 
   /**
    * Indicates an element with event listeners (which need to be attached
    * during hydration)
    */
-  HYDRATE_EVENTS = 1 << 5,
+  HYDRATE_EVENTS = 1 << 5, // 32
 
   /**
    * Indicates a fragment whose children order doesn't change.

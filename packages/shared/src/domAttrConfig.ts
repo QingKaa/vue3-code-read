@@ -54,6 +54,7 @@ export const propsToAttrMap: Record<string, string | undefined> = {
 }
 
 /**
+ * 判断是否已知的 html 属性
  * Known attributes, this is used for stringification of runtime static nodes
  * so that we don't stringify bindings that cannot be set from HTML.
  * Don't also forget to allow `data-*` and `aria-*`!
@@ -78,6 +79,7 @@ export const isKnownHtmlAttr = /*#__PURE__*/ makeMap(
 )
 
 /**
+ * 判断是否已知的 Svg 属性
  * Generated from https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute
  */
 export const isKnownSvgAttr = /*#__PURE__*/ makeMap(
