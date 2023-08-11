@@ -76,6 +76,7 @@ export const createApp = ((...args) => {
     if (!container) return
 
     const component = app._component
+    // 模板处理
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
@@ -98,6 +99,7 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
+    // 清空容器内容
     container.innerHTML = ''
     const proxy = mount(container, false, container instanceof SVGElement)
     if (container instanceof Element) {
@@ -176,10 +178,16 @@ function injectCompilerOptionsCheck(app: App) {
   }
 }
 
+/**
+ * html容器处理
+ * @param container Element | ShadowRoot | string
+ * @returns Element | null
+ */
 function normalizeContainer(
   container: Element | ShadowRoot | string
 ): Element | null {
   if (isString(container)) {
+    // 字符串 —— 选择器
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
       warn(
