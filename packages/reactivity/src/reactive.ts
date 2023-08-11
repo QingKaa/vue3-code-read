@@ -13,12 +13,21 @@ import {
 } from './collectionHandlers'
 import type { UnwrapRefSimple, Ref, RawSymbol } from './ref'
 
+/**
+ * Reactive 代理对象的标识
+ *
+ * SKIP = '__v_skip', // 是否跳过响应式代理  
+ * IS_REACTIVE = '__v_isReactive', // 是否是响应式对象  
+ * IS_READONLY = '__v_isReadonly', // 是否是只读对象  
+ * IS_SHALLOW = '__v_isShallow', // 是否是浅层响应式对象  
+ * RAW = '__v_raw' // 原始值  
+ */
 export const enum ReactiveFlags {
-  SKIP = '__v_skip',
-  IS_REACTIVE = '__v_isReactive',
-  IS_READONLY = '__v_isReadonly',
-  IS_SHALLOW = '__v_isShallow',
-  RAW = '__v_raw'
+  SKIP = '__v_skip', // 是否跳过响应式代理  
+  IS_REACTIVE = '__v_isReactive', // 是否是响应式对象  
+  IS_READONLY = '__v_isReadonly', // 是否是只读对象  
+  IS_SHALLOW = '__v_isShallow', // 是否是浅层响应式对象  
+  RAW = '__v_raw' // 原始值  
 }
 
 export interface Target {
@@ -29,15 +38,22 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
+// 响应式对象的缓存
 export const reactiveMap = new WeakMap<Target, any>()
 export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 export const shallowReadonlyMap = new WeakMap<Target, any>()
 
+/**
+ * Target 的类型
+ * INVALID = 0 无效类型
+ * COMMON = 1, 普通类型
+   COLLECTION = 2 集合类型
+ */
 const enum TargetType {
   INVALID = 0,
-  COMMON = 1,
-  COLLECTION = 2
+  COMMON = 1, // Object Array
+  COLLECTION = 2 // Map Set WeakMap WeakSet
 }
 
 function targetTypeMap(rawType: string) {
@@ -55,6 +71,15 @@ function targetTypeMap(rawType: string) {
   }
 }
 
+/**
+ * 获取 Target 的 TargetType 类型
+ *
+ * 存在 __v_skip 属性或者 对象不可扩展，返回 TargetType.INVALID
+ * 不可扩展判断：是否可以在其上添加新的属性
+ *
+ * @param value
+ * @returns
+ */
 function getTargetType(value: Target) {
   return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
     ? TargetType.INVALID
@@ -62,6 +87,7 @@ function getTargetType(value: Target) {
 }
 
 // only unwrap nested ref
+// 展开嵌套的ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
 /**
@@ -83,6 +109,7 @@ export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
+    // 只读对象不需要再次代理，直接返回
     return target
   }
   return createReactiveObject(
@@ -245,6 +272,16 @@ export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   )
 }
 
+/**
+ * 创建响应式对象
+ *
+ * @param target 目标对象
+ * @param isReadonly 是否只读
+ * @param baseHandlers  TargetType.COMMON 类型的代理配置
+ * @param collectionHandlers  TargetType.COLLECTION 类型的代理配置
+ * @param proxyMap 缓存的代理对象
+ * @returns
+ */
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
@@ -253,6 +290,7 @@ function createReactiveObject(
   proxyMap: WeakMap<Target, any>
 ) {
   if (!isObject(target)) {
+    // 目标对象必须为对象类型
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
     }
@@ -264,22 +302,27 @@ function createReactiveObject(
     target[ReactiveFlags.RAW] &&
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
   ) {
+    // 已经是响应式对象，直接返回
     return target
   }
   // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
+    // 已经存在代理对象，直接返回
     return existingProxy
   }
   // only specific value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
+    // 不合法的类型，直接返回
     return target
   }
+  // 创建响应式代理
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
+  // 保存到 proxyMap 中缓存
   proxyMap.set(target, proxy)
   return proxy
 }
@@ -310,12 +353,15 @@ export function isReactive(value: unknown): boolean {
 }
 
 /**
+ * 根据传入值是否存在 __v_isReadonly 属性来判断是否是只读对象
+ *
  * Checks whether the passed value is a readonly object. The properties of a
  * readonly object can change, but they can't be assigned directly via the
  * passed object.
  *
  * The proxies created by {@link readonly()} and {@link shallowReadonly()} are
  * both considered readonly, as is a computed ref without a set function.
+ *
  *
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreadonly}
@@ -342,6 +388,8 @@ export function isProxy(value: unknown): boolean {
 /**
  * Returns the raw, original object of a Vue-created proxy.
  *
+ * 返回响应式数据的原始值
+ *
  * `toRaw()` can return the original object from proxies created by
  * {@link reactive()}, {@link readonly()}, {@link shallowReactive()} or
  * {@link shallowReadonly()}.
@@ -364,6 +412,7 @@ export function isProxy(value: unknown): boolean {
  */
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
+  // const raw = observed && observed.__v_raw
   return raw ? toRaw(raw) : observed
 }
 

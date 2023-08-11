@@ -59,6 +59,7 @@ var Vue = (function (exports) {
     // the leading comma is intentional so empty string "" is also included
     ",key,ref,ref_for,ref_key,onVnodeBeforeMount,onVnodeMounted,onVnodeBeforeUpdate,onVnodeUpdated,onVnodeBeforeUnmount,onVnodeUnmounted"
   );
+  console.log(' ====> isReservedProp', isReservedProp);
 
   /**
    * 判断是否内置的 directive
@@ -66,6 +67,7 @@ var Vue = (function (exports) {
   const isBuiltInDirective = /* @__PURE__ */ makeMap(
     "bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo"
   );
+  console.log(' ====> isBuiltInDirective', isBuiltInDirective);
   /**
    * 返回fn处理的结果并 缓存结果到 闭包里面的 cache 中
    * @param {*} fn 
@@ -268,9 +270,11 @@ var Vue = (function (exports) {
     let { class: klass, style } = props;
     if (klass && !isString(klass)) {
       props.class = normalizeClass(klass);
+      console.log(' ====> props.class', props.class);
     }
     if (style) {
       props.style = normalizeStyle(style);
+      console.log(' ====> props.style', props.style);
     }
     return props;
   }
@@ -400,7 +404,7 @@ var Vue = (function (exports) {
     console.warn(`[Vue warn] ${msg}`, ...args);
   }
 
-	// ---------------------------- EffectScope ---------------------------------
+	// ---------------------------- Effect ---------------------------------
   let activeEffectScope;
   class EffectScope {
 		// detached：独立的
@@ -773,9 +777,18 @@ var Vue = (function (exports) {
   }
 
   const isNonTrackableKeys = /* @__PURE__ */ makeMap(`__proto__,__v_isRef,__isVue`);
+  
+  /**
+   * Symbol中除了 arguments 与 caller 之外的 内置通用的属性（symbols 类型）
+   * Symbol(Symbol.asyncIterator)，Symbol(Symbol.hasInstance)，
+   * Symbol(Symbol.isConcatSpreadable)，Symbol(Symbol.iterator)，Symbol(Symbol.match)，Symbol(Symbol.matchAll)，
+   * Symbol(Symbol.replace)，Symbol(Symbol.search)，Symbol(Symbol.species)，Symbol(Symbol.split)，Symbol(Symbol.toPrimitive)，
+   * Symbol(Symbol.toStringTag)，Symbol(Symbol.unscopables)
+   */
   const builtInSymbols = new Set(
     /* @__PURE__ */ Object.getOwnPropertyNames(Symbol).filter((key) => key !== "arguments" && key !== "caller").map((key) => Symbol[key]).filter(isSymbol)
   );
+
   const get$1 = /* @__PURE__ */ createGetter();
   const shallowGet = /* @__PURE__ */ createGetter(false, true);
   const readonlyGet = /* @__PURE__ */ createGetter(true);
@@ -901,7 +914,6 @@ var Vue = (function (exports) {
     track(target, "iterate", isArray(target) ? "length" : ITERATE_KEY);
     return Reflect.ownKeys(target);
   }
-//   普通响应式 proxy 配置项
   const mutableHandlers = {
     get: get$1,
     set: set$1,
@@ -909,7 +921,6 @@ var Vue = (function (exports) {
     has: has$1,
     ownKeys
   };
-//   只读响应式 proxy 配置项
   const readonlyHandlers = {
     get: readonlyGet,
     set(target, key) {
@@ -931,7 +942,6 @@ var Vue = (function (exports) {
       return true;
     }
   };
-//   浅层响应式 proxy 配置项
   const shallowReactiveHandlers = /* @__PURE__ */ extend(
     {},
     mutableHandlers,
@@ -940,7 +950,6 @@ var Vue = (function (exports) {
       set: shallowSet
     }
   );
-//   浅层只读响应式 proxy 配置项
   const shallowReadonlyHandlers = /* @__PURE__ */ extend(
     {},
     readonlyHandlers,
@@ -5229,6 +5238,7 @@ If this is a native custom element, make sure to exclude it from component resol
         warn(`root props passed to app.mount() must be an object.`);
         rootProps = null;
       }
+	//   vue app 基本上下文对象
       const context = createAppContext();
       {
         Object.defineProperty(context.config, "unwrapInjectedRef", {
@@ -5242,7 +5252,9 @@ If this is a native custom element, make sure to exclude it from component resol
           }
         });
       }
+			// 已安装的插件
       const installedPlugins = /* @__PURE__ */ new Set();
+			// 挂载flag
       let isMounted = false;
       const app = context.app = {
         _uid: uid$1++,
@@ -5262,6 +5274,7 @@ If this is a native custom element, make sure to exclude it from component resol
             );
           }
         },
+				// vue 插件
         use(plugin, ...options) {
           if (installedPlugins.has(plugin)) {
             warn(`Plugin has already been applied to target app.`);
@@ -6452,12 +6465,21 @@ If you want to remount the same app, move your app creation logic into a factory
   function createHydrationRenderer(options) {
     return baseCreateRenderer(options, createHydrationFunctions);
   }
+  /**
+   * 创建渲染器 renderer
+   * @param {*} options 
+   * @param {*} createHydrationFns 
+   * @returns 
+   */
   function baseCreateRenderer(options, createHydrationFns) {
-    const target = getGlobalThis();
+    // 获取当前全局对象 window
+    const target = getGlobalThis(); 
+    // 标记 Vue
     target.__VUE__ = true;
     {
       setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target);
     }
+
     const {
       insert: hostInsert,
       remove: hostRemove,
@@ -6572,6 +6594,13 @@ If you want to remount the same app, move your app creation logic into a factory
         setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2);
       }
     };
+    /**
+     * 文本节点处理
+     * @param {*} n1 
+     * @param {*} n2 
+     * @param {*} container 
+     * @param {*} anchor 
+     */
     const processText = (n1, n2, container, anchor) => {
       if (n1 == null) {
         hostInsert(
@@ -6586,6 +6615,14 @@ If you want to remount the same app, move your app creation logic into a factory
         }
       }
     };
+
+    /**
+     * 注释节点处理
+     * @param {*} n1 
+     * @param {*} n2 
+     * @param {*} container 
+     * @param {*} anchor 
+     */
     const processCommentNode = (n1, n2, container, anchor) => {
       if (n1 == null) {
         hostInsert(
@@ -9176,6 +9213,9 @@ Component that was made reactive: `,
   const svgNS = "http://www.w3.org/2000/svg";
   const doc = typeof document !== "undefined" ? document : null;
   const templateContainer = doc && /* @__PURE__ */ doc.createElement("template");
+  /**
+   * 元素操作方法
+   */
   const nodeOps = {
     insert: (child, parent, anchor) => {
       parent.insertBefore(child, anchor || null);
@@ -9471,8 +9511,22 @@ Component that was made reactive: `,
   }
 
   const nativeOnRE = /^on[a-z]/;
+  /**
+   * 属性设置方法
+   * 
+   * @param {*} el 
+   * @param {*} key 
+   * @param {*} prevValue 
+   * @param {*} nextValue 
+   * @param {*} isSVG 
+   * @param {*} prevChildren 
+   * @param {*} parentComponent 
+   * @param {*} parentSuspense 
+   * @param {*} unmountChildren 
+   */
   const patchProp = (el, key, prevValue, nextValue, isSVG = false, prevChildren, parentComponent, parentSuspense, unmountChildren) => {
     if (key === "class") {
+        // 设置class
       patchClass(el, nextValue, isSVG);
     } else if (key === "style") {
       patchStyle(el, prevValue, nextValue);
@@ -10513,6 +10567,9 @@ Component that was made reactive: `,
     el.style.display = value ? el._vod : "none";
   }
 
+  /**
+   * 渲染器相关方法
+   */
   const rendererOptions = /* @__PURE__ */ extend({ patchProp }, nodeOps);
   let renderer;
   let enabledHydration = false;
@@ -10530,17 +10587,28 @@ Component that was made reactive: `,
   const hydrate = (...args) => {
     ensureHydrationRenderer().hydrate(...args);
   };
+  /**
+   * 创建应用
+   * @param  {...any} args 
+   * @returns 
+   */
   const createApp = (...args) => {
-    const app = ensureRenderer().createApp(...args);
+      const app = ensureRenderer().createApp(...args);
+      console.log(' ====> app', app);
     {
+      // 在 app.config 中增加了 isNativeTag 属性，用于判断是否是原生标签
       injectNativeTagCheck(app);
       injectCompilerOptionsCheck(app);
     }
     const { mount } = app;
+    // 处理 mount 方法
     app.mount = (containerOrSelector) => {
+      // 获取挂载的容器（如果是字符串，则通过querySelector获取）
       const container = normalizeContainer(containerOrSelector);
+			// 不存在情况下，直接返回
       if (!container)
         return;
+
       const component = app._component;
       if (!isFunction(component) && !component.render && !component.template) {
         component.template = container.innerHTML;
@@ -10570,6 +10638,11 @@ Component that was made reactive: `,
     };
     return app;
   };
+
+  /**
+   * 在 app.config 中增加了 isNativeTag 属性，用于判断是否是原生标签
+   * @param {*} app Vue 实例
+   */
   function injectNativeTagCheck(app) {
     Object.defineProperty(app.config, "isNativeTag", {
       value: (tag) => isHTMLTag(tag) || isSVGTag(tag),
@@ -10615,6 +10688,8 @@ Component that was made reactive: `,
       }
       return res;
     }
+    // window.ShadowRoot： DOM子树的根节点，与文档中的主DOM树分开渲染
+    // mode 确定shadowRoot 的内部实现是否可以被JavaScript访问以及修改
     if (window.ShadowRoot && container instanceof window.ShadowRoot && container.mode === "closed") {
       warn(
         `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`

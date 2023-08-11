@@ -37,7 +37,9 @@ type RefBase<T> = {
   value: T
 }
 
+// ref依赖收集函数
 export function trackRefValue(ref: RefBase<any>) {
+  // 两个标记位，分别用于标记是否被追踪过，是否是新追踪的
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     if (__DEV__) {
@@ -47,6 +49,7 @@ export function trackRefValue(ref: RefBase<any>) {
         key: 'value'
       })
     } else {
+      // 收集依赖
       trackEffects(ref.dep || (ref.dep = createDep()))
     }
   }
@@ -71,6 +74,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
 
 /**
  * Checks if a value is a ref object.
+ * 判断 r 是否为一个 ref 对象：通过 __v_isRef 标志进行判断
  *
  * @param r - The value to inspect.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isref}
@@ -126,35 +130,47 @@ export function shallowRef(value?: unknown) {
 
 function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
+    // 是ref对象，直接返回
     return rawValue
   }
+  // 创建并返回新的 Ref 对象
   return new RefImpl(rawValue, shallow)
 }
 
+// Ref 定义
 class RefImpl<T> {
   private _value: T
+  // 原始值
   private _rawValue: T
-
+  // 依赖集合
   public dep?: Dep = undefined
+  // 只读属性，用于标记当前对象是 Ref 对象
   public readonly __v_isRef = true
-
+  // 构造函数
   constructor(value: T, public readonly __v_isShallow: boolean) {
+    // _rawValue 用于存储原始值；toRaw 用于获取原始值
     this._rawValue = __v_isShallow ? value : toRaw(value)
+    // 如果是浅层的，直接赋值，否则调用 toReactive 转换成reactive对象
     this._value = __v_isShallow ? value : toReactive(value)
   }
-
+  // 定义value的getter方法
   get value() {
+    // 取值时候，触发依赖收集
     trackRefValue(this)
+    // 返回_value的值
     return this._value
   }
-
+  // 定义value的setter方法
   set value(newVal) {
+    // 判断是否使用直接值：浅响应式对象、只读对象
     const useDirectValue =
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
+    // 如果值有变化，更新值，并触发依赖更新
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
+      //   触发Ref引起的依赖
       triggerRefValue(this, newVal)
     }
   }

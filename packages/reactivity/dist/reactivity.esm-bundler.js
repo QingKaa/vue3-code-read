@@ -210,6 +210,13 @@ function cleanupEffect(effect2) {
     deps.length = 0;
   }
 }
+
+/**
+ * 
+ * @param {*} fn 注册的函数
+ * @param {*} options 
+ * @returns 
+ */
 function effect(fn, options) {
   if (fn.effect) {
     fn = fn.effect.fn;

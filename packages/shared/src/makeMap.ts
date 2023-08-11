@@ -1,5 +1,4 @@
 /**
- * @description: Make a map and return a function for checking if a key
  * Make a map and return a function for checking if a key
  * is in that map.
  * IMPORTANT: all calls of this function must be prefixed with

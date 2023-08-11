@@ -16,6 +16,13 @@ import { ComputedRefImpl } from './computed'
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
+
+/**
+ * {
+ *  target1: Map{ key1: Set<effect> },
+ *  target2: Map{ key2: Set<effect> },
+ * }
+ */
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
 // The number of effects currently being tracked recursively.
@@ -30,6 +37,9 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
+/**
+ * effect 调度器（就是一个函数），当trigger动作触发effect重新执行时，可以决定effect函数的执行时机、次数以及方式
+ */
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
@@ -45,11 +55,19 @@ export type DebuggerEventExtraInfo = {
   oldTarget?: Map<any, any> | Set<any>
 }
 
+/**
+ * 全局变量，用于存储当前正在运行的 effect
+ */
 export let activeEffect: ReactiveEffect | undefined
 
+// 构建一个唯一的key，用于hasKeys操作与副作用函数之间绑定的键
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
+// Map类型遍历的唯一标识
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
+/**
+ * effect 对象，用于存储副作用函数的相关信息
+ */
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -155,7 +173,7 @@ export interface DebuggerOptions {
 }
 
 export interface ReactiveEffectOptions extends DebuggerOptions {
-  lazy?: boolean
+  lazy?: boolean //
   scheduler?: EffectScheduler
   scope?: EffectScope
   allowRecurse?: boolean
@@ -190,10 +208,13 @@ export function effect<T = any>(
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)
   }
+  //   当 options 不存在 或者 options.lazy 为假时执行一次副作用函数
   if (!options || !options.lazy) {
     _effect.run()
   }
+  //   绑定runner 的执行作用域
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
+
   runner.effect = _effect
   return runner
 }
@@ -207,10 +228,14 @@ export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
 }
 
+/**
+ * 全局变量，标记是否进行追踪
+ */
 export let shouldTrack = true
 const trackStack: boolean[] = []
 
 /**
+ * 暂停收集依赖(将当前状态入栈并关闭收集状态)
  * Temporarily pauses tracking.
  */
 export function pauseTracking() {
@@ -219,6 +244,7 @@ export function pauseTracking() {
 }
 
 /**
+ * 继续收集依赖（将当前状态入栈并打开收集控制开关）
  * Re-enables effect tracking (if it was paused).
  */
 export function enableTracking() {
@@ -227,6 +253,7 @@ export function enableTracking() {
 }
 
 /**
+ * 重置成之前的开关状态
  * Resets the previous global effect tracking state.
  */
 export function resetTracking() {
@@ -263,10 +290,16 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
 }
 
+/**
+ * 收集依赖
+ * @param dep
+ * @param debuggerEventExtraInfo
+ */
 export function trackEffects(
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  // 将全局标记设成false，暂停收集依赖
   let shouldTrack = false
   if (effectTrackDepth <= maxMarkerBits) {
     if (!newTracked(dep)) {
@@ -298,6 +331,8 @@ export function trackEffects(
  * Finds all deps associated with the target (or a specific property) and
  * triggers the effects stored within.
  *
+ * 找到target所有相关的依赖并且触发存储在其中的副作用
+ *
  * @param target - The reactive object.
  * @param type - Defines the type of the operation that needs to trigger effects.
  * @param key - Can be used to target a specific reactive property in the target object.
@@ -310,18 +345,25 @@ export function trigger(
   oldValue?: unknown,
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
+  //  获取当前对象的依赖列表
   const depsMap = targetMap.get(target)
+  //  依赖列表不存在，无需处理
   if (!depsMap) {
     // never been tracked
     return
   }
 
+  //  存放需要执行的 Dep 列表
   let deps: (Dep | undefined)[] = []
   if (type === TriggerOpTypes.CLEAR) {
+    // 特殊情况处理 -- CLEAR 操作
     // collection being cleared
     // trigger all effects for target
+    // TriggerOpTypes.CLEAR 操作需要执行所有的 effect（所有的元素、属性都删除了，当然需要全部重新执行）
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
+    // 特殊情况处理 -- 修改数组的 length 属性
+    // 当修改数组的长度length属性，对于大于新数组长度的元素需要重新执行其副作用函数，并且因为修改的是length属性，所以length本身的effect函数也需要重新执行
     const newLength = Number(newValue)
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= newLength) {
@@ -330,27 +372,38 @@ export function trigger(
     })
   } else {
     // schedule runs for SET | ADD | DELETE
+    // void 0 === undefined 为什么要用void 0 而不用 undefined ？
+    // 因为undefined 不是JavaScript的保留字，可能会被覆盖，所以使用 void 0 可以确保获得真正的 undefined
     if (key !== void 0) {
+      //   将当前对象的key对应的依赖列表添加到待执行 deps 中
       deps.push(depsMap.get(key))
     }
 
+    // 特殊情况处理 
     // also run for iteration key on ADD | DELETE | Map.SET
     switch (type) {
       case TriggerOpTypes.ADD:
+        // add 操作会影响到for...in，所以需要重新执行for...in的effect函数，就是 ITERATE_KEY 对应的effect函数
         if (!isArray(target)) {
           deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
+            // 如果是 Map 类型，则还需要执行 MAP_KEY_ITERATE_KEY 对应的effect函数
             deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         } else if (isIntegerKey(key)) {
           // new index added to array -> length changes
+          // 当操作类型是 ADD，并且目标是数组，应该取出与length相关的effect函数 ？？？
+          // 在数组操作中：如果设置数组的下标大于数组的长度，会隐式改变数组的长度length，所以需要执行length 相关的effect
           deps.push(depsMap.get('length'))
         }
         break
       case TriggerOpTypes.DELETE:
+        // 数组没有删除操作，所以只需要处理非数组的情况
         if (!isArray(target)) {
+            // 删除也会影响到for...in，所以需要重新执行for...in的effect函数，就是 ITERATE_KEY 对应的effect函数
           deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
+            // Map 类型也是如此
             deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         }
@@ -367,6 +420,7 @@ export function trigger(
     ? { target, type, key, newValue, oldValue, oldTarget }
     : undefined
 
+  //   执行所有的需要执行的effect函数
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
@@ -390,6 +444,11 @@ export function trigger(
   }
 }
 
+/**
+ * 批量执行effect
+ * @param dep
+ * @param debuggerEventExtraInfo
+ */
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
@@ -398,16 +457,24 @@ export function triggerEffects(
   const effects = isArray(dep) ? dep : [...dep]
   for (const effect of effects) {
     if (effect.computed) {
+      //  先执行 computed
       triggerEffect(effect, debuggerEventExtraInfo)
     }
   }
   for (const effect of effects) {
     if (!effect.computed) {
+      // 后执行非 computed
       triggerEffect(effect, debuggerEventExtraInfo)
     }
   }
 }
 
+/**
+ * 执行单个 effect
+ * effect.scheduler 在则执行 effect.scheduler，否则直接执行 effect.run
+ * @param effect
+ * @param debuggerEventExtraInfo
+ */
 function triggerEffect(
   effect: ReactiveEffect,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
@@ -417,13 +484,21 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect.scheduler) {
+      // 调度器存在则执行调度器
       effect.scheduler()
     } else {
+      // 否则直接执行
       effect.run()
     }
   }
 }
 
+/**
+ * 获取某个对象的某个属性的依赖列表
+ * @param object
+ * @param key
+ * @returns
+ */
 export function getDepFromReactive(object: any, key: string | number | symbol) {
   return targetMap.get(object)?.get(key)
 }
