@@ -157,6 +157,11 @@ export class ReactiveEffect<T = any> {
   }
 }
 
+/**
+ * 清空Effect中的deps  
+ * 
+ * @param effect 
+ */
 function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {

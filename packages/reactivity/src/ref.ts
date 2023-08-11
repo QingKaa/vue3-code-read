@@ -37,7 +37,10 @@ type RefBase<T> = {
   value: T
 }
 
-// ref依赖收集函数
+/**
+ * 收集 ref 的依赖
+ * @param ref 
+ */
 export function trackRefValue(ref: RefBase<any>) {
   // 两个标记位，分别用于标记是否被追踪过，是否是新追踪的
   if (shouldTrack && activeEffect) {

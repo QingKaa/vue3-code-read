@@ -16,6 +16,9 @@ const scheduler = (fn: any) => {
   }
 }
 
+/**
+ * 遍历执行队列中的effect函数，并清空队列
+ */
 const flush = () => {
   for (let i = 0; i < queue.length; i++) {
     queue[i]()

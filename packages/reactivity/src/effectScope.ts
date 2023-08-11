@@ -120,6 +120,11 @@ export function effectScope(detached?: boolean) {
   return new EffectScope(detached)
 }
 
+/**
+ * 保存effect到effectScope
+ * @param effect 
+ * @param scope 
+ */
 export function recordEffectScope(
   effect: ReactiveEffect,
   scope: EffectScope | undefined = activeEffectScope

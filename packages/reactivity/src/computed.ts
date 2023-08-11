@@ -56,10 +56,12 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
+    // 数据是“脏”的，或者不可缓存，就重新计算
     if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
     }
+    // 返回计算结果
     return self._value
   }
 
@@ -116,7 +118,7 @@ export function computed<T>(
 ) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
-
+  // 只传入getter函数
   const onlyGetter = isFunction(getterOrOptions)
   if (onlyGetter) {
     getter = getterOrOptions

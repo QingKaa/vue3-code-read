@@ -196,6 +196,12 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
+/**
+ * renderer.createApp API.
+ * @param render 
+ * @param hydrate 
+ * @returns createApp
+ */
 export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
@@ -227,10 +233,14 @@ export function createAppAPI<HostElement>(
       })
     }
 
+    // 保存已安装的插件
     const installedPlugins = new Set()
-
+    // 挂载标记
     let isMounted = false
 
+    // 创建app实例 并保存到context中
+    // context.app = app
+    // app._context = context
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
@@ -330,9 +340,11 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
+        //   创建根组件的 vnode
           const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
+          // 保存根组件的上下文
           vnode.appContext = context
 
           // HMR root reload
@@ -347,7 +359,9 @@ export function createAppAPI<HostElement>(
           } else {
             render(vnode, rootContainer, isSVG)
           }
+        //   标记已挂载
           isMounted = true
+        //   保存容器
           app._container = rootContainer
           // for devtools and telemetry
           ;(rootContainer as any).__vue_app__ = app

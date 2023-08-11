@@ -355,10 +355,10 @@ function baseCreateRenderer(
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
   const patch: PatchFn = (
-    n1,
-    n2,
-    container,
-    anchor = null,
+    n1, // oldVnode
+    n2, // vnode
+    container, // hostParentNode
+    anchor = null, // 
     parentComponent = null,
     parentSuspense = null,
     isSVG = false,
