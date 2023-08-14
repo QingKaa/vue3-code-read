@@ -1,8 +1,8 @@
-var Vue = (function (exports) {
+var Vue = (function (exports) {``
   'use strict';
 
   /**
-   * 返回一个function 判断参数是否在str之中
+   * 返回一个 function 判断参数是否在str之中
    * @param {*} str 
    * @param {*} expectsLowerCase 
    * @returns 
@@ -104,20 +104,38 @@ var Vue = (function (exports) {
     (str) => str.charAt(0).toUpperCase() + str.slice(1)
   );
   /**
-   * 
+   * 事件名称处理  click => onClick
    */
   const toHandlerKey = cacheStringFunction(
     (str) => str ? `on${capitalize(str)}` : ``
   );
-  // Object.is 判断两个值是否严格相等，判断引用类型时候只能判断是否引用同一个对象，并不能判断对象的值是否相等
+  
+  /**
+   *  Object.is 判断两个值是否严格相等，判断引用类型时候只能判断是否引用同一个对象，并不能判断对象的值是否相等
+   * @param {*} value 
+   * @param {*} oldValue 
+   * @returns 
+   */
   const hasChanged = (value, oldValue) => !Object.is(value, oldValue);
-  // 批处理函数列表
+
+  /**
+   * 批处理函数列表
+   * @param {*} fns 
+   * @param {*} arg 
+   */
   const invokeArrayFns = (fns, arg) => {
     for (let i = 0; i < fns.length; i++) {
       fns[i](arg);
     }
   };
-  // 在 obj 上添加 key 属性，值为 value，并设置改值为不可枚举
+  
+  /**
+   * 在 obj 上添加 key 属性，值为 value，并设置改值为不可枚举  
+   * Object.defineProperty  
+   * @param {*} obj 
+   * @param {*} key 
+   * @param {*} value 
+   */
   const def = (obj, key, value) => {
     Object.defineProperty(obj, key, {
       configurable: true,
@@ -125,20 +143,47 @@ var Vue = (function (exports) {
       value
     });
   };
+
+  /**
+   * 转换成浮点数  
+   * 使用 parseFloat 转换  
+   * Number('1.111a')  => NaN  
+   * parseFloat('1.111a') => 1.111  
+   * parseInt('1.111a') => 1.111
+   * @param {*} val 
+   * @returns 
+   */
   const looseToNumber = (val) => {
     const n = parseFloat(val);
     return isNaN(n) ? val : n;
   };
+
+  /**
+   * 转换成数字
+   * 使用 Number 转换  
+   * Number('1.111a')  => NaN  
+   * parseFloat('1.111a') => 1.111  
+   * parseInt('1.111a') => 1.111
+   * @param {*} val 
+   * @returns 
+   */
   const toNumber = (val) => {
     const n = isString(val) ? Number(val) : NaN;
     return isNaN(n) ? val : n;
   };
   let _globalThis;
-  //   获取当前全局对象
+
+  /**
+   * 获取当前全局对象
+   * @returns 
+   */
   const getGlobalThis = () => {
     return _globalThis || (_globalThis = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : {});
   };
 
+  /**
+   * patch flag
+   */
   const PatchFlagNames = {
     [1]: `TEXT`,
     [2]: `CLASS`,
@@ -162,7 +207,14 @@ var Vue = (function (exports) {
     [3]: "FORWARDED"
   };
 
+  /**
+   * 全局函数
+   */
   const GLOBALS_ALLOWED = "Infinity,undefined,NaN,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console";
+
+  /**
+   * 判断是否全局函数
+   */
   const isGloballyAllowed = /* @__PURE__ */ makeMap(GLOBALS_ALLOWED);
 
   const range = 2;
@@ -202,10 +254,15 @@ var Vue = (function (exports) {
         break;
       }
     }
+    console.log(' ====> res.join("\n")', res.join("\n"));
     return res.join("\n");
   }
 
-//   格式化样式 处理成对象的形式
+  /**
+   * 格式化样式 处理成对象的形式/字符串
+   * @param {*} value 
+   * @returns 
+   */
   function normalizeStyle(value) {
     if (isArray(value)) {
       const res = {};
@@ -225,23 +282,51 @@ var Vue = (function (exports) {
       return value;
     }
   }
-//   列表分隔正则
+  /**
+   * 匹配不在括号内的分号     
+   * ?! 负向前瞻，表示后面的内容不能匹配  
+   * [^(]* 匹配除了左括号之外的任意字符  
+   * \) 匹配右括号  
+   */
   const listDelimiterRE = /;(?![^(]*\))/g;
-//   属性值绑定正则
+
+  /**
+   * 匹配 : 开头，后面跟着一个或多个非换行符的字符  
+   * () 分组，可以获取括号内的内容  
+   * [^]+ 匹配除了换行符之外的所有字符  
+   * + 一个或多个  
+   * 只匹配第一个 : 后面的内容  
+   */
   const propertyDelimiterRE = /:([^]+)/;
-//   样式注释正则  匹配带有 /*  */ 注释
+  
+//   匹配带有 /*  */ 注释
   const styleCommentRE = /\/\*[^]*?\*\//g;
+  /**
+   * 行内静态样式 OR 动态样式（数组）中字符串类型元素样式处理  
+   * @param {*} cssText 
+   * @returns 
+   */
+  // style="/*color:saddlebrown;*/backgroundColor:red;"
   function parseStringStyle(cssText) {
+    console.log(' ====> cssText', cssText);
+    // cssText = /*color:saddlebrown;*/backgroundColor:red;
     const ret = {};
+    // 将注释内容替换为空字符串 - 以分号对字符串进行分割成数组 - 遍历数组元素
     cssText.replace(styleCommentRE, "").split(listDelimiterRE).forEach((item) => {
+    // ["backgroundColor:red",""]
       if (item) {
         const tmp = item.split(propertyDelimiterRE);
         tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim());
       }
     });
+    console.log(' ====> ret', ret);
     return ret;
   }
-  // 格式化 class 类名，返回字符形式
+  /**
+   * 格式化 class 类名，返回字符形式
+   * @param {*} value 
+   * @returns 
+   */
   function normalizeClass(value) {
     let res = "";
     if (isString(value)) {
@@ -263,7 +348,11 @@ var Vue = (function (exports) {
     return res.trim();
   }
 
-  // 格式化 props属性
+  /**
+   * 格式化 props属性 class 、 style
+   * @param {*} props 
+   * @returns 
+   */
   function normalizeProps(props) {
     if (!props)
       return null;
@@ -276,15 +365,21 @@ var Vue = (function (exports) {
       props.style = normalizeStyle(style);
       console.log(' ====> props.style', props.style);
     }
+    console.log(' ====> props', props);
     return props;
   }
 
-	// 标签判断
-  // html 标签   
+  /**
+   * HTML 标签
+   */
   const HTML_TAGS = "html,body,base,head,link,meta,style,title,address,article,aside,footer,header,hgroup,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,option,output,progress,select,textarea,details,dialog,menu,summary,template,blockquote,iframe,tfoot";
-	// svg 标签
+ /**
+  * svg 标签
+  */
   const SVG_TAGS = "svg,animate,animateMotion,animateTransform,circle,clipPath,color-profile,defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,foreignObject,g,hatch,hatchpath,image,line,linearGradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,text,textPath,title,tspan,unknown,use,view";
-	// 空标签
+  /**
+   * 空标签
+   */
   const VOID_TAGS = "area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr";
   const isHTMLTag = /* @__PURE__ */ makeMap(HTML_TAGS);
   const isSVGTag = /* @__PURE__ */ makeMap(SVG_TAGS);
@@ -292,11 +387,21 @@ var Vue = (function (exports) {
 	// 特殊布尔属性
   const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`;
   const isSpecialBooleanAttr = /* @__PURE__ */ makeMap(specialBooleanAttrs);
+  /**
+   * Boolean 类型的属性
+   * @param {*} value 
+   * @returns 
+   */
   function includeBooleanAttr(value) {
     return !!value || value === "";
   }
 
-	// 判断两个数组是否相等：长度 && 每个元素都相等
+ /**
+  * 判断两个数组是否相等：长度 && 每个元素都相等
+  * @param {*} a 
+  * @param {*} b 
+  * @returns 
+  */
   function looseCompareArrays(a, b) {
     if (a.length !== b.length)
       return false;
@@ -308,43 +413,48 @@ var Vue = (function (exports) {
     return equal;
   }
 
-	// 比较两个值是否相等
+  /**
+   * 比较两个值是否相等
+   * @param {*} a 
+   * @param {*} b 
+   * @returns 
+   */
   function looseEqual(a, b) {
     if (a === b)
       return true;
     let aValidType = isDate(a);
     let bValidType = isDate(b);
-		// 时间类型，判断时间是否相等
+	// 时间类型，判断时间是否相等
     if (aValidType || bValidType) {
       return aValidType && bValidType ? a.getTime() === b.getTime() : false;
     }
     aValidType = isSymbol(a);
     bValidType = isSymbol(b);
-		// symbol 类型判断是否相等
+	// symbol 类型判断是否相等
     if (aValidType || bValidType) {
       return a === b;
     }
     aValidType = isArray(a);
     bValidType = isArray(b);
-		// 数组类型，判断数组是否相等
+	// 数组类型，判断数组是否相等(数组长度相等&&每个元素都相等)
     if (aValidType || bValidType) {
       return aValidType && bValidType ? looseCompareArrays(a, b) : false;
     }
     aValidType = isObject(a);
     bValidType = isObject(b);
-		// 对象类型，判断对象是否相等
+	// 对象类型，判断对象是否相等
     if (aValidType || bValidType) {
-			// 其中之一非对象,返回 false
+		// 其中之一非对象,返回 false
       if (!aValidType || !bValidType) {
         return false;
       }
       const aKeysCount = Object.keys(a).length;
       const bKeysCount = Object.keys(b).length;
-			// 对象属性数量不相等，返回 false
+		// 对象属性数量不相等，返回 false
       if (aKeysCount !== bKeysCount) {
         return false;
       }
-			// 遍历每个属性进行判断
+		// 遍历每个属性进行判断
       for (const key in a) {
         const aHasKey = a.hasOwnProperty(key);
         const bHasKey = b.hasOwnProperty(key);
@@ -353,26 +463,40 @@ var Vue = (function (exports) {
         }
       }
     }
-		// 其他类型 直接转换为字符串进行判断
+	// 其他类型 直接转换为字符串进行判断 String({}) = '[object Object]'
     return String(a) === String(b);
   }
 
-	// 查找数组中某个值的下标
+/**
+ * 查找数组中某个值的下标
+ * @param {*} arr 
+ * @param {*} val 
+ * @returns 
+ */
   function looseIndexOf(arr, val) {
     return arr.findIndex((item) => looseEqual(item, val));
   }
 	/**
 	 * 转换成字符串
 	 * 字符串类型 ==> 直接返回 val
-	 * null ==> 空字符串
+	 * null ==> ""
 	 * 数组/对象 ==> JSON.stringify(val)
-	 * 其他类型 ==> String
+	 * 其他 ==> String
 	 * @param {*} val 
 	 * @returns 
 	 */
   const toDisplayString = (val) => {
-    return isString(val) ? val : val == null ? "" : isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? JSON.stringify(val, replacer, 2) : String(val);
+    return isString(val) ? val 
+        : val == null ? "" :
+         isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? JSON.stringify(val, replacer, 2) : String(val);
   };
+  
+  /**
+   * 自定义  JSON.stringify 转换方法
+   * @param {*} _key 
+   * @param {*} val 
+   * @returns 
+   */
   const replacer = (_key, val) => {
     if (val && val.__v_isRef) {
       return replacer(_key, val.value);
@@ -404,7 +528,7 @@ var Vue = (function (exports) {
     console.warn(`[Vue warn] ${msg}`, ...args);
   }
 
-	// ---------------------------- Effect ---------------------------------
+	// ---------------------------- EffectScope ---------------------------------
   let activeEffectScope;
   class EffectScope {
 		// detached：独立的
@@ -422,6 +546,7 @@ var Vue = (function (exports) {
        * @internal
        */
       this.cleanups = [];
+    //   创建effect时记录当前活跃的 EffectScope
       this.parent = activeEffectScope;
       if (!detached && activeEffectScope) {
         this.index = (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
@@ -433,12 +558,16 @@ var Vue = (function (exports) {
       return this._active;
     }
     run(fn) {
+        // 只有当前effect 状态active 为 true 才会执行 fn
       if (this._active) {
+        // 保存activeEffectScope
         const currentEffectScope = activeEffectScope;
         try {
+            // 设置当前 activeEffectScope 为 this
           activeEffectScope = this;
           return fn();
         } finally {
+            // 还原 activeEffectScope
           activeEffectScope = currentEffectScope;
         }
       } else {
@@ -485,18 +614,36 @@ var Vue = (function (exports) {
       }
     }
   }
-	// 创建返回 一个新的 EffectScope 实例
+/**
+ * 创建返回 一个新的 EffectScope 实例
+ * @param {*} detached 
+ * @returns 
+ */
   function effectScope(detached) {
     return new EffectScope(detached);
   }
+
+  /**
+   * 将effect 保存到当前EffectScope的effects队列中
+   * @param {*} effect 
+   * @param {*} scope 
+   */
   function recordEffectScope(effect, scope = activeEffectScope) {
     if (scope && scope.active) {
       scope.effects.push(effect);
     }
   }
+  /**
+   * 获取当前副作用作用域 EffectScope
+   * @returns 
+   */
   function getCurrentScope() {
     return activeEffectScope;
   }
+  /**
+   * 将fn 添加到当前活跃的 EffectScope 的 cleanups 中
+   * @param {*} fn 
+   */
   function onScopeDispose(fn) {
     if (activeEffectScope) {
       activeEffectScope.cleanups.push(fn);
@@ -507,6 +654,11 @@ var Vue = (function (exports) {
     }
   }
 
+  /**
+   * 创建一个 Set 实例(dep)
+   * @param {*} effects 
+   * @returns 
+   */
   const createDep = (effects) => {
     const dep = new Set(effects);
     dep.w = 0;
@@ -539,28 +691,65 @@ var Vue = (function (exports) {
       deps.length = ptr;
     }
   };
+  // ---------------------------- effect ---------------------------------
 
+  /**
+   * 依赖关系 WeakMap 对象  
+   * 以 对象为 key，Map 为 value  
+   * {    
+   *   object1: Map(key1: Set<ReactiveEffect>, key2: Set<ReactiveEffect>),  
+   *   object2:  Map(key1: Set<ReactiveEffect>, key2: Set<ReactiveEffect>),  
+   * }  
+   */
   const targetMap = /* @__PURE__ */ new WeakMap();
+
+  /**
+   * effect 依赖嵌套层级
+   */
   let effectTrackDepth = 0;
   let trackOpBit = 1;
+
+  /**
+   * 最大标记数量
+   */
   const maxMarkerBits = 30;
+
+  /**
+   * 当前活跃的Effect
+   */
   let activeEffect;
+
+  /**
+   * 遍历时的key
+   */
   const ITERATE_KEY = Symbol("iterate" );
+
+  /**
+   * Map 遍历时的key
+   */
   const MAP_KEY_ITERATE_KEY = Symbol("Map key iterate" );
+
+  /**
+   * Effect 副作用 Class
+   */
   class ReactiveEffect {
+    // scope： EffectScope 副作用作用域
     constructor(fn, scheduler = null, scope) {
       this.fn = fn;
-      this.scheduler = scheduler;
-      this.active = true;
-      this.deps = [];
+      this.scheduler = scheduler; // 调度器
+      this.active = true;  // 标记为活跃
+      this.deps = [];  // 依赖列表
       this.parent = void 0;
+      // 将当前副作用添加到 EffEctScope 作用域中
       recordEffectScope(this, scope);
     }
     run() {
       if (!this.active) {
         return this.fn();
       }
+        //   执行前保存当前活跃的 Effect
       let parent = activeEffect;
+        //   记录当前活跃的 Effect 是否需要追踪依赖
       let lastShouldTrack = shouldTrack;
       while (parent) {
         if (parent === this) {
@@ -574,8 +763,10 @@ var Vue = (function (exports) {
         shouldTrack = true;
         trackOpBit = 1 << ++effectTrackDepth;
         if (effectTrackDepth <= maxMarkerBits) {
+            // 遍历修改 deps 中的 dep.w
           initDepMarkers(this);
         } else {
+            // 清空 deps 列表
           cleanupEffect(this);
         }
         return this.fn();
@@ -584,16 +775,20 @@ var Vue = (function (exports) {
           finalizeDepMarkers(this);
         }
         trackOpBit = 1 << --effectTrackDepth;
+        // 还原 activeEffect 的值到之前的 effect与shouldTrack
         activeEffect = this.parent;
         shouldTrack = lastShouldTrack;
+        // 将当前 effect 的parent 设置undefind
         this.parent = void 0;
         if (this.deferStop) {
+            // 延时停止 - 知道完后自动调用 stop 方法
           this.stop();
         }
       }
     }
     stop() {
       if (activeEffect === this) {
+        // 延时停止
         this.deferStop = true;
       } else if (this.active) {
         cleanupEffect(this);
@@ -604,6 +799,11 @@ var Vue = (function (exports) {
       }
     }
   }
+
+  /**
+   * 清空effect.deps 队列
+   * @param {*} effect2 
+   */
   function cleanupEffect(effect2) {
     const { deps } = effect2;
     if (deps.length) {
@@ -617,46 +817,85 @@ var Vue = (function (exports) {
     if (fn.effect) {
       fn = fn.effect.fn;
     }
+    // effect 实例
     const _effect = new ReactiveEffect(fn);
     if (options) {
+        // 合并配置项
       extend(_effect, options);
       if (options.scope)
         recordEffectScope(_effect, options.scope);
     }
+    // 传递了 options.lazy = true 表示懒执行
     if (!options || !options.lazy) {
+        // 非懒执行情况下先执行一次
       _effect.run();
     }
+    // _effect.run.bind(_effect)  返回 _effect.fn 并绑定在 _effect作用域 下
     const runner = _effect.run.bind(_effect);
     runner.effect = _effect;
+    console.log(' ====> runner', runner);
     return runner;
   }
+
+  /**
+   * 停止 effect 
+   * @param {*} runner 
+   */
   function stop(runner) {
     runner.effect.stop();
   }
+
+  /**
+   * 是否需要追踪
+   */
   let shouldTrack = true;
   const trackStack = [];
+  /**
+   * 暂停依赖收集：将当前 shouldTrack 状态保存到 trackStack 中，并将 shouldTrack 设置为 false
+   */
   function pauseTracking() {
     trackStack.push(shouldTrack);
     shouldTrack = false;
   }
+
+  /**
+   * 恢复依赖收集状态：从trackStack 中取出最后一个入栈的，并将其值赋值给 shouldTrack
+   */
   function resetTracking() {
     const last = trackStack.pop();
     shouldTrack = last === void 0 ? true : last;
   }
+
+  /**
+   * 收集依赖   
+   * 只有 shouldTrack && activeEffect 情况下才进行依赖收集   
+   * @param {*} target 收集依赖的对象
+   * @param {*} type 收集依赖的类型
+   * @param {*} key  收集依赖的key
+   */
   function track(target, type, key) {
     if (shouldTrack && activeEffect) {
+        // 获取对象的依赖关系Map
       let depsMap = targetMap.get(target);
       if (!depsMap) {
         targetMap.set(target, depsMap = /* @__PURE__ */ new Map());
       }
+    //   获取依赖关系Map中的key对应的依赖列表
       let dep = depsMap.get(key);
       if (!dep) {
         depsMap.set(key, dep = createDep());
       }
       const eventInfo = { effect: activeEffect, target, type, key } ;
+      console.log(' ====> eventInfo', eventInfo);
       trackEffects(dep, eventInfo);
     }
   }
+
+  /**
+   * 
+   * @param {*} dep 
+   * @param {*} debuggerEventExtraInfo 
+   */
   function trackEffects(dep, debuggerEventExtraInfo) {
     let shouldTrack2 = false;
     if (effectTrackDepth <= maxMarkerBits) {
@@ -668,7 +907,9 @@ var Vue = (function (exports) {
       shouldTrack2 = !dep.has(activeEffect);
     }
     if (shouldTrack2) {
+        // 将当前 activeEffect 添加到 dep 中
       dep.add(activeEffect);
+        // 将 dep 添加到 activeEffect.deps 中
       activeEffect.deps.push(dep);
       if (activeEffect.onTrack) {
         activeEffect.onTrack(
@@ -682,6 +923,17 @@ var Vue = (function (exports) {
       }
     }
   }
+
+  /**
+   * 触发依赖执行
+   * @param {*} target 
+   * @param {*} type 
+   * @param {*} key 
+   * @param {*} newValue 
+   * @param {*} oldValue 
+   * @param {*} oldTarget 
+   * @returns 
+   */
   function trigger(target, type, key, newValue, oldValue, oldTarget) {
     const depsMap = targetMap.get(target);
     if (!depsMap) {
@@ -746,6 +998,8 @@ var Vue = (function (exports) {
       }
     }
   }
+
+//   执行 effects 列表
   function triggerEffects(dep, debuggerEventExtraInfo) {
     const effects = isArray(dep) ? dep : [...dep];
     for (const effect2 of effects) {
@@ -759,23 +1013,37 @@ var Vue = (function (exports) {
       }
     }
   }
+  /**
+   * 执行 effect
+   * @param {*} effect2 
+   * @param {*} debuggerEventExtraInfo 
+   */
   function triggerEffect(effect2, debuggerEventExtraInfo) {
     if (effect2 !== activeEffect || effect2.allowRecurse) {
       if (effect2.onTrigger) {
         effect2.onTrigger(extend({ effect: effect2 }, debuggerEventExtraInfo));
       }
       if (effect2.scheduler) {
+        // 自定义调度器
         effect2.scheduler();
       } else {
+        // 默认执行方法
         effect2.run();
       }
     }
   }
+
+  /**
+   * 从 targetMap 中获取 key 的依赖列表
+   */
   function getDepFromReactive(object, key) {
     var _a;
     return (_a = targetMap.get(object)) == null ? void 0 : _a.get(key);
   }
 
+  /**
+   * 无需收集依赖
+   */
   const isNonTrackableKeys = /* @__PURE__ */ makeMap(`__proto__,__v_isRef,__isVue`);
   
   /**
@@ -789,10 +1057,14 @@ var Vue = (function (exports) {
     /* @__PURE__ */ Object.getOwnPropertyNames(Symbol).filter((key) => key !== "arguments" && key !== "caller").map((key) => Symbol[key]).filter(isSymbol)
   );
 
+  // ---------------------------- 响应式数据 Proxy 代理配置 ---------------------------------
   const get$1 = /* @__PURE__ */ createGetter();
   const shallowGet = /* @__PURE__ */ createGetter(false, true);
   const readonlyGet = /* @__PURE__ */ createGetter(true);
   const shallowReadonlyGet = /* @__PURE__ */ createGetter(true, true);
+  /**
+   * 数组方法代理处理
+   */
   const arrayInstrumentations = /* @__PURE__ */ createArrayInstrumentations();
   function createArrayInstrumentations() {
     const instrumentations = {};
@@ -914,6 +1186,10 @@ var Vue = (function (exports) {
     track(target, "iterate", isArray(target) ? "length" : ITERATE_KEY);
     return Reflect.ownKeys(target);
   }
+
+  /**
+   * 普通对象的 proxy 代理配置
+   */
   const mutableHandlers = {
     get: get$1,
     set: set$1,
@@ -921,6 +1197,9 @@ var Vue = (function (exports) {
     has: has$1,
     ownKeys
   };
+  /**
+   * 只读对象的 proxy 代理配置
+   */
   const readonlyHandlers = {
     get: readonlyGet,
     set(target, key) {
@@ -959,7 +1238,7 @@ var Vue = (function (exports) {
   );
 
   const toShallow = (value) => value;
-  const getProto = (v) => Reflect.getPrototypeOf(v);
+  const getProto = (v) => Reflect.getPrototypeOf(v);                                                                                                                                                                                                                    
   function get(target, key, isReadonly = false, isShallow = false) {
     target = target["__v_raw"];
     const rawTarget = toRaw(target);
@@ -1345,6 +1624,13 @@ var Vue = (function (exports) {
   function isProxy(value) {
     return isReactive(value) || isReadonly(value);
   }
+
+  /**
+   * 获取原始值，proxy的原始值；  
+   * __v_raw属性中保存了 代理对象的原始值
+   * @param {*} observed 
+   * @returns 
+   */
   function toRaw(observed) {
     const raw = observed && observed["__v_raw"];
     return raw ? toRaw(raw) : observed;
@@ -5338,6 +5624,7 @@ If this is a native custom element, make sure to exclude it from component resol
               );
             }
             const vnode = createVNode(rootComponent, rootProps);
+            console.log(' ====> vnode', vnode);
             vnode.appContext = context;
             {
               context.reload = () => {
@@ -8376,6 +8663,7 @@ If you want to remount the same app, move your app creation logic into a factory
     if (props) {
       props = guardReactiveProps(props);
       let { class: klass, style } = props;
+      console.log(' ====> style', style);
       if (klass && !isString(klass)) {
         props.class = normalizeClass(klass);
       }
@@ -8552,6 +8840,7 @@ Component that was made reactive: `,
           }
         } else if (key === "style") {
           ret.style = normalizeStyle([ret.style, toMerge.style]);
+          console.log(' ====> ret.style', ret.style);
         } else if (isOn(key)) {
           const existing = ret[key];
           const incoming = toMerge[key];
@@ -14937,6 +15226,7 @@ Use a v-bind binding combined with a v-on listener that emits update:x event ins
     }
   };
   const parseInlineCSS = (cssText, loc) => {
+    console.log(' ====> cssText', cssText);
     const normalized = parseStringStyle(cssText);
     return createSimpleExpression(
       JSON.stringify(normalized),
